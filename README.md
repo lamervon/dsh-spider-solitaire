@@ -1,10 +1,29 @@
 # Spider Solitaire
 
+[![Install with DeepSeek Harness](https://img.shields.io/badge/DeepSeek_Harness-plugin-4c6ef5)](https://github.com/lamervon/dsh-spider-solitaire)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Play classic Spider Solitaire inside the right Sidebar of DeepSeek Harness: deep-finish the board while an agent works, and come back to the game after a reload because the board and your statistics stay on this device.
 
 ## Install
 
-The bundle is a local plugin directory. In DeepSeek Harness open **Plugins**, choose **Add plugin**, and pick this folder; then open the game from the spade button at the sidebar foot.
+This is a DeepSeek Harness plugin bundle. Install it from GitHub in **Plugins** → **Add plugin** by entering either spec:
+
+```
+github:lamervon/dsh-spider-solitaire
+```
+
+```
+git@github.com:lamervon/dsh-spider-solitaire.git
+```
+
+To track a moving branch rather than the default, pin it: `github:lamervon/dsh-spider-solitaire#main`.
+
+To install from a checkout instead, pick the folder with **Add plugin** → local directory.
+
+After it is enabled, open the game from the spade button at the sidebar foot.
+
+**Note on the package name:** the plugin is `@lamervon/dsh-spider-solitaire`. It began as `@local/dsh-spider-solitaire`; an earlier local install under that name is not upgraded by the GitHub install, so remove it first (**Plugins** → the `@local/...` row → remove) and then install the GitHub spec.
 
 ## Where to find it
 

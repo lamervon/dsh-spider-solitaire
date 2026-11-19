@@ -1,6 +1,6 @@
 {
   "meta.title": "Spider Solitaire",
-  "meta.description": "Plays classic Spider Solitaire in the right Sidebar: one, two or four suits, five stock deals, undo and redo, hints, and Microsoft-style scoring. The running game and each difficulty's statistics stay in this browser's local storage. Open it from the Spade button at the sidebar foot or from the Sidebar guide.",
+  "meta.description": "Plays classic Spider Solitaire in the right Sidebar: one, two or four suits, five stock deals, undo and redo, hints, sound, and Microsoft-style scoring. The running game, your appearance choices and each difficulty record stay in this browser. Open it from the spade button at the sidebar foot, or from the Sidebar guide.",
   "title": "Spider Solitaire",
   "button.label": "Spider",
   "button.tooltip": "Play Spider Solitaire",
@@ -59,5 +59,6 @@
   "back.classic": "Classic",
   "back.ruby": "Ruby",
   "back.violet": "Violet",
-  "back.midnight": "Midnight"
+  "back.midnight": "Midnight",
+  "meta.detail": "docs/DETAIL.md"
 }

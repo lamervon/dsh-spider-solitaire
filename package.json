@@ -1,10 +1,29 @@
 {
-  "name": "@local/dsh-spider-solitaire",
+  "name": "@lamervon/dsh-spider-solitaire",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "description": "蜘蛛纸牌：在右侧边栏里玩一局经典蜘蛛接龙，成绩保存在本机",
+  "description": "Spider Solitaire for the DeepSeek Harness right Sidebar: play a hand beside the conversation, with the board and statistics kept on this device",
   "license": "MIT",
+  "author": "lamervon",
+  "homepage": "https://github.com/lamervon/dsh-spider-solitaire#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lamervon/dsh-spider-solitaire.git",
+    "directory": "."
+  },
+  "bugs": {
+    "url": "https://github.com/lamervon/dsh-spider-solitaire/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "spider-solitaire",
+    "solitaire",
+    "card-game"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -16,7 +35,9 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
+    "docs",
     "README.md",
+    "LICENSE",
     "icon.svg",
     "src"
   ],

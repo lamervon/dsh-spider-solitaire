@@ -14,13 +14,13 @@
  * travel selects a movable run, and a press on another column moves it there.
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-spider-solitaire',
+  id: '@lamervon/dsh-spider-solitaire',
   factory(require) {
     const React = require('react')
     const h = React.createElement
 
     const KIND = 'spider'
-    const TAB_ID = '@local/dsh-spider-solitaire'
+    const TAB_ID = '@lamervon/dsh-spider-solitaire'
     const NS = 'spiderSolitaire'
 
     // ---- rules -----------------------------------------------------------

@@ -17,12 +17,14 @@ import assert from 'node:assert/strict'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..')
+/** The package name, read from the manifest so a rename never strands the check. */
+const PACKAGE_NAME = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).name
 
 let factory = null
 globalThis.window = {
   __ModuleLoader__: {
     load({ id, factory: create }) {
-      assert.equal(id, '@local/dsh-spider-solitaire')
+      assert.equal(id, PACKAGE_NAME, 'the browser module registers under the package name')
       factory = create
     },
   },
