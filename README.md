@@ -41,6 +41,12 @@ The game is a right-Sidebar page tab, so it docks beside the conversation, float
 - **Stock** in the bottom left deals one card onto every column; every column must hold a card first.
 - **Undo**, **Redo** and **Hint** sit in the toolbar. A hint outlines the suggested run and column; when no card can move, it highlights the stock instead, pointing at the deal. A hint on a board with no move and no stock left ends the game.
 
+## Languages
+
+The interface ships in English and Chinese and follows the Harness language setting, switching live without a reload. Every string goes through the locale registry: the board's labels and dialogs, the toolbar's accessible names, the sidebar-foot button, and the guide card. The plugin's title, description and detail page resolve per language too, both in Plugin Manager and on the bundle page.
+
+The two dictionaries live in `locale/en.json` and `locale/zh.json`. They carry one identical key set, which `src/test.mjs` and the build both enforce, so a missing translation fails the build rather than showing a raw key.
+
 ## Sound
 
 The board voices its own events: a soft slide as a run lands, a rustle when the stock deals, a rising arpeggio when a king-to-ace run clears, a fanfare for the last one, and a short warning tone when the rules refuse a move. The cues are synthesized with Web Audio at play time, so the bundle ships no audio files and makes no network request. The ♫ button in the toolbar turns them off, and the choice is remembered on this device. Browsers keep audio asleep until you interact with the page, so the first cue you hear follows your first click or drag.

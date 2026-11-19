@@ -1418,6 +1418,14 @@ window.__ModuleLoader__.load({
 
     /** The tab body. */
     function Board({ t }) {
+      // A language switch redraws the board's copy. The slot runtime may also
+      // re-render us on its own; either path ends with the new language.
+      const [, setLocaleTick] = React.useState(0)
+      React.useEffect(() => {
+        const listener = () => { setLocaleTick(value => value + 1) }
+        localeRevision.listeners.add(listener)
+        return () => { localeRevision.listeners.delete(listener) }
+      }, [])
       const game = useGame()
       const { state } = game
       const [selection, setSelection] = React.useState(null)
@@ -2006,6 +2014,15 @@ window.__ModuleLoader__.load({
 
     let pluginCtx = null
     const translateRef = { current: key => key }
+    /**
+     * Bumped whenever the active language changes.
+     *
+     * A translator built by `locale.bind` resolves the active language at call
+     * time, but nothing re-renders a mounted component when that language
+     * changes. The board subscribes here so a language switch redraws its copy
+     * immediately instead of waiting for the next unrelated render.
+     */
+    const localeRevision = { value: 0, listeners: new Set() }
 
     /* Build output: the dictionaries and the stylesheet are inlined above so the
      * bundle ships one browser module with no runtime asset reads. */
@@ -2055,6 +2072,12 @@ window.__ModuleLoader__.load({
             translateRef.current = locale.bind(NS)
             return () => { translateRef.current = key => key }
           }, 'spider: translator')
+          // Redraw mounted copy on a language switch: the bound translator
+          // already reads the new language, but only a render shows it.
+          ctx.effect(() => locale.subscribe(() => {
+            localeRevision.value += 1
+            for (const listener of [...localeRevision.listeners]) listener()
+          }), 'spider: language changes')
         }
         // One owned style element: inserting and removing it is the whole lifecycle.
         ctx.effect(() => {

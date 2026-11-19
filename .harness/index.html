@@ -106,15 +106,30 @@
   const params = new URLSearchParams(location.search)
   if (params.get('theme') === 'dark') document.body.className = 'dark'
   const width = Number(params.get('width')); if (width > 0) { document.getElementById('frame').style.width = width + 'px' }
-  const lang = params.get('lang') ?? 'zh'
 
-  // The build script writes the bundle's own dictionaries beside this page.
+  // A locale service with the same contract the host gives a plugin: `bind`
+  // returns one translator that reads the ACTIVE language at call time, and
+  // `subscribe` notifies when it changes. `window.setLang` switches it, so the
+  // page can prove a live switch rather than a reload.
   const DICTS = window.__SPIDER_DICTS__
-  const t = (key, values) => {
-    const template = (DICTS[lang] ?? DICTS.en)[key] ?? key
+  const localeState = {
+    active: params.get('lang') ?? 'zh',
+    listeners: new Set(),
+    getLocale() { return { active: this.active } },
+    getSnapshot() { return { active: this.active, revision: 0 } },
+    subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) },
+    setLocale(id) {
+      if (this.active === id) return
+      this.active = id
+      for (const fn of [...this.listeners]) fn()
+    },
+  }
+  const translateFor = (key, values) => {
+    const template = (DICTS[localeState.active] ?? DICTS.en)[key] ?? key
     if (values === undefined) return template
     return template.replace(/\{(\w+)\}/g, (whole, name) => (name in values ? String(values[name]) : whole))
   }
+  window.setLang = (id) => { localeState.setLocale(id) }
 
   // One slot registration is all the harness needs: the tab body component.
   const capturedSlot = { component: null }
@@ -123,7 +138,11 @@
       if (name === 'locale') {
         return {
           register: () => () => {},
-          bind: () => t,
+          bind: () => translateFor,
+          getLocale: () => localeState.getLocale(),
+          getSnapshot: () => localeState.getSnapshot(),
+          subscribe: fn => localeState.subscribe(fn),
+          setLocale: id => localeState.setLocale(id),
         }
       }
       if (name === 'sidebarRightTabs') return { register: () => () => {} }
@@ -145,7 +164,14 @@
   captured.apply(ctx)
   const Board = capturedSlot.component
   if (Board === null) throw new Error('the bundle registered no tab body')
-  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Board, { t }))
+  // The body reads its copy through the `t` seat, and re-renders when the
+  // locale changes, exactly as the host's slot runtime does.
+  function Hosted() {
+    const [, bump] = React.useReducer(x => x + 1, 0)
+    React.useEffect(() => localeState.subscribe(bump), [])
+    return React.createElement(Board, { t: translateFor })
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Hosted))
 </script>
 </body>
 </html>
