@@ -1,0 +1,1188 @@
+/* Spider Solitaire board.
+ *
+ * Surface, ink and borders come from the host's `--dsw-alias-*` tokens so the
+ * pane reads correctly in both themes. A card face is artwork: it keeps one
+ * white sheet and fixed black/red pips in either theme, the way a physical card
+ * does on a dark table.
+ *
+ * Card width and every card's `top` are computed by the board from its own
+ * measured size, so the ten columns fit a narrow docked pane and a wide float
+ * alike and a tall column compresses its faces instead of overflowing.
+ */
+
+.sp-root {
+  --sp-gap: 6px;
+  --sp-radius: 7px;
+  /* The felt's own palette, so the table reads as a card table rather than as a
+   * panel: a deep green cloth, a darker rim where the cloth meets the rail, and
+   * the woven texture laid over both. */
+  --sp-felt: #2e8b63;
+  --sp-felt-deep: #237552;
+  --sp-felt-rim: #1a5c40;
+  --sp-felt-ink: rgba(255, 255, 255, 0.82);
+  --sp-felt-ink-dim: rgba(255, 255, 255, 0.55);
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 10px 12px 12px;
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  font-size: 13px;
+  background: var(--dsw-alias-bg-base);
+}
+
+/* ---- table ------------------------------------------------------------ */
+
+/* The table is the cloth itself: a deep green that vignettes toward the rail,
+ * with a fine weave over it and a hairline highlight where the cloth is stitched
+ * in. It wraps the felt, the stock and the cleared-run row, so everything the
+ * player touches sits on one surface. */
+.sp-table {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 10px 8px;
+  overflow: hidden;
+  background-color: var(--sp-felt);
+  /* Two woven passes at a hairline scale give felt's grain without a texture
+   * image, and the radial vignette darkens the rail end where the eye rests. */
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.07) 0%, transparent 55%),
+    radial-gradient(140% 120% at 50% 115%, var(--sp-felt-rim) 0%, transparent 62%);
+  border: 1px solid var(--sp-felt-rim);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -18px 30px -18px rgba(0, 0, 0, 0.55),
+    0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* A stitched hairline just inside the rail, on the light-and-dark pair the
+ * host's own surfaces use so the seam reads in both themes. */
+.sp-table::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  pointer-events: none;
+}
+
+/* The table's contents sit above the weave. */
+.sp-table > * {
+  position: relative;
+}
+
+/* ---- felt colours ----------------------------------------------------- */
+
+/* The felt is four variables, so a colour choice replaces the cloth without
+ * touching the weave, the vignette, or anything drawn on it. Each palette keeps
+ * the same relationship the default green has: a lit cloth, a deeper body a
+ * step down, and a dark rail where it meets the table's edge. */
+.sp-table.sp-felt-blue {
+  --sp-felt: #2f6fa8;
+  --sp-felt-deep: #245a8a;
+  --sp-felt-rim: #1a4670;
+}
+
+.sp-table.sp-felt-red {
+  --sp-felt: #a63a50;
+  --sp-felt-deep: #8a2c3f;
+  --sp-felt-rim: #6b2233;
+}
+
+.sp-table.sp-felt-charcoal {
+  --sp-felt: #5a5d63;
+  --sp-felt-deep: #474a50;
+  --sp-felt-rim: #3a3d43;
+}
+
+/* ---- card-back colours ------------------------------------------------ */
+
+/* The back choice sets the ink and weave scale the shared card-back recipe
+ * reads, so every back — tableau, stock, flight, cleared pile — repaints at
+ * once and no two can drift apart. */
+.sp-table.sp-backs-classic {
+  --sp-back-ink: #2f68b0;
+  --sp-back-scale: 7px;
+}
+
+.sp-table.sp-backs-ruby {
+  --sp-back-ink: #b03050;
+  --sp-back-scale: 7px;
+}
+
+.sp-table.sp-backs-violet {
+  --sp-back-ink: #6444a0;
+  --sp-back-scale: 8px;
+}
+
+.sp-table.sp-backs-midnight {
+  --sp-back-ink: #33415c;
+  --sp-back-scale: 6px;
+}
+
+/* ---- head ------------------------------------------------------------- */
+
+.sp-head {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+  margin-bottom: 10px;
+}
+
+.sp-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sp-title-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.sp-title {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-badge {
+  flex: none;
+  padding: 1px 7px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+}
+
+.sp-head-actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+}
+
+.sp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: var(--dsw-radius-xs);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .sp-icon-btn:hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.sp-icon-btn:focus-visible,
+.sp-tool:focus-visible,
+.sp-stock:focus-visible,
+.sp-menu-item:focus-visible,
+.sp-result-btn:focus-visible,
+.sp-dialog-close:focus-visible,
+.sp-foot-action:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  outline-offset: 1px;
+}
+
+.sp-icon-on {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+.sp-meta {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+
+.sp-meta-item {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.sp-meta-label {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.sp-meta-value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* The tool row: four square buttons on one baseline, then the status line. The
+ * buttons share a 30px box, a 1px inset highlight and a soft shadow, so the row
+ * reads as a set of controls rather than as loosely spaced glyphs. */
+.sp-tools {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sp-tool {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-sm);
+  box-shadow: 0 1px 2px var(--dsw-alias-bg-mask-2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+@media (hover: hover) {
+  .sp-tool:not(:disabled):hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover-solid);
+    border-color: var(--dsw-alias-border-l4);
+  }
+}
+
+/* A press sinks the button a fraction, so the click has physical feedback. */
+.sp-tool:not(:disabled):active {
+  background: var(--dsw-alias-interactive-bg-active);
+  box-shadow: inset 0 1px 2px var(--dsw-alias-bg-mask-2);
+  transform: translateY(0.5px);
+}
+
+.sp-tool:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  background: transparent;
+  border-color: var(--dsw-alias-border-l1);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* A toggle in its on state: the accent border and ink say "this is active". */
+.sp-tool-on,
+.sp-tool-on:not(:disabled):hover {
+  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--dsw-alias-interactive-bg-active);
+  border-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+}
+
+.sp-tool svg {
+  display: block;
+}
+
+/* The New game button is the row's primary action: the same square as the icon
+ * tools beside it, filled with the primary ink so it is found at a glance. Its
+ * name lives in the accessible label and the tooltip. */
+.sp-new {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--dsw-alias-label-primary-foreground);
+  font: inherit;
+  background: var(--dsw-alias-button-primary-fill);
+  border: 0.5px solid transparent;
+  border-radius: var(--dsw-radius-sm);
+  box-shadow: 0 1px 2px var(--dsw-alias-bg-mask-2);
+  cursor: pointer;
+  transition: background-color 0.12s ease, transform 0.08s ease;
+}
+
+@media (hover: hover) {
+  .sp-new:hover {
+    background: var(--dsw-alias-button-primary-hover);
+  }
+}
+
+.sp-new:active {
+  transform: translateY(0.5px);
+}
+
+.sp-new:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  outline-offset: 1px;
+}
+
+.sp-new svg {
+  display: block;
+}
+
+/* A hairline separates the primary action from the icon tools beside it. */
+.sp-tools-sep {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--dsw-alias-border-l2);
+}
+
+/* The status line takes the row's remaining width and never pushes the buttons. */
+.sp-tools-gap {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-status {
+  overflow: hidden;
+  color: var(--dsw-alias-state-warn-label);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The new-game menu drops under the header's actions. */
+.sp-menu {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--dsw-alias-bg-overlay);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2);
+}
+
+.sp-menu-head {
+  padding: 4px 8px 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.sp-menu-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--dsw-radius-xs);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .sp-menu-item:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.sp-menu-on {
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+.sp-menu-suits {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- board ------------------------------------------------------------ */
+
+/* The tableau takes the remaining height; each column is a positioned box whose
+ * cards carry explicit tops, and the columns sit flush with the pane's edges. */
+.sp-board {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.sp-tableau {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--sp-gap);
+  height: 100%;
+}
+
+.sp-col {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  border-radius: var(--sp-radius);
+}
+
+/* An empty column is a slot printed on the cloth: a shaded well rather than a
+ * theme border, so it reads as part of the table at every theme. */
+.sp-col-empty::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--sp-radius);
+}
+
+/* The drop target lifts out of the cloth: a lighter well with a bright rim. */
+.sp-col-drop::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  z-index: 0;
+  box-sizing: border-box;
+  width: calc(100% + 4px);
+  aspect-ratio: 5 / 7;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  border-radius: calc(var(--sp-radius) + 2px);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+}
+
+.sp-col-hint::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  border: 1.5px solid #ffd75e;
+  border-radius: calc(var(--sp-radius) + 3px);
+  box-shadow: 0 0 10px rgba(255, 215, 94, 0.35);
+  pointer-events: none;
+  animation: sp-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sp-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.85; }
+}
+
+/* ---- deal flight ------------------------------------------------------ */
+
+/* The flying cards sit above the tableau on their own layer, which takes no
+ * clicks: a stray press mid-flight must reach the real cards underneath. The
+ * layer is the felt's child, so the coordinates measured for each flight are
+ * the ones used to place it. */
+.sp-fly-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+}
+
+.sp-fly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--sp-fly-w);
+  height: var(--sp-fly-h);
+  /* In flight the card is lifted off the table, so it carries the one shadow a
+   * back does not: the shared recipe supplies the rest. */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transform-origin: top left;
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0.24, 1);
+  will-change: transform;
+}
+
+/* A landed card is a touch flatter, so the eye reads it as settled rather than
+ * still hovering over the pile. */
+.sp-fly-arrived {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ---- cards ------------------------------------------------------------ */
+
+/* Every size on a face is a share of the card itself, in `cq` units of the
+ * card's own container: a 24px card in a narrow dock and a 56px card in a wide
+ * float both keep a legible corner and a centred pip instead of spilling the
+ * same fixed 10px glyph over a small face. */
+.sp-card {
+  position: absolute;
+  left: 0;
+  container-type: size;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  margin: 0;
+  overflow: hidden;
+  color: #1b1b1f;
+  font-family: var(--dsw-font-family);
+  background: #fdfdfb;
+  border: 0.5px solid rgba(0, 0, 0, 0.24);
+  border-radius: var(--sp-radius);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.16);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sp-red {
+  color: #c8102e;
+}
+
+/* The corner reads rank and suit side by side, not stacked: a covered card may
+ * show only its top strip, and one row of large lettering fits in that strip
+ * where a stacked rank-over-suit would push the suit out of sight. */
+.sp-corner {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  display: flex;
+  flex-direction: row;
+  gap: 1px;
+  align-items: baseline;
+  font-size: clamp(11px, 40cqw, 19px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* The bottom index mirrors the top one: the same rank and suit, rotated to face
+ * the other way. It is anchored to the bottom-right corner by right/bottom, and
+ * its width is its content, so the corner it measures from is stable on every
+ * card width — a shrinking flex box would drag its `left` back toward the top
+ * index on the narrowest faces. */
+.sp-corner-br {
+  top: auto;
+  right: 3px;
+  bottom: 2px;
+  left: auto;
+  width: max-content;
+  flex-direction: row-reverse;
+  transform: rotate(180deg);
+}
+
+.sp-suit {
+  font-size: clamp(9px, 34cqw, 16px);
+  line-height: 1;
+}
+
+/* The centre pip sits in the middle of the face, clear of both corner indexes:
+ * without its own positioning it would fall into the top-left corner and read
+ * as a second suit glyph beside the rank. */
+.sp-pip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: clamp(9px, 44cqw, 28px);
+  line-height: 1;
+  opacity: 0.9;
+  transform: translate(-50%, -50%);
+}
+
+/* On the narrowest docked panes a card is about 19px wide and the two index
+ * rows plus a centre pip cannot all fit. The pip steps aside there, and the
+ * mirrored bottom index follows on faces too small to hold it at its corner:
+ * the top index alone still names the card, and a squeezed second glyph only
+ * muddles the face. */
+@container (max-width: 26px) {
+  .sp-pip {
+    display: none;
+  }
+}
+
+@container (max-width: 22px) {
+  .sp-corner-br {
+    display: none;
+  }
+}
+
+/* A selected run reads on the strip each card leaves uncovered, not on its
+ * outline: the cards stack, so an outline sits under the next card and only the
+ * bottom of the pile would show it. Each selected card therefore gains a tinted
+ * face and a bar along its top edge, which is exactly the part the player sees. */
+.sp-card-selected {
+  background: #f2fbf4;
+}
+
+.sp-card-selected::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--dsw-alias-state-success-primary);
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+}
+
+/* A dark theme keeps the same signal: the tint goes deeper instead of lighter. */
+body[data-ds-dark-theme] .sp-card-selected {
+  background: #e8f6ec;
+}
+
+/* The pile's last card owns its full outline, so the selection also reads as a
+ * closed shape at the end of the run. */
+.sp-card-selected.sp-card-selected-last {
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-success-primary), 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+.sp-card-lifted {
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.34);
+  cursor: grabbing;
+  will-change: transform;
+}
+
+.sp-card:not(.sp-back) {
+  cursor: grab;
+}
+
+/* A back is a blue sheet with a hairline inset, drawn from the same corner
+ * radius as a face so a dealt stack reads as one pile. */
+/* ---- card backs ------------------------------------------------------- */
+
+/* One card-back recipe for every place a back is drawn: a face-down card in a
+ * column, a card in the stock, a card in flight, and a cleared run's slot. The
+ * pattern, radius, rim and shadow are declared once here so no pile looks like a
+ * different deck from the row beside it. Only elevation differs, and the layer
+ * that needs it adds a shadow of its own. */
+.sp-back,
+.sp-stock-back,
+.sp-fly {
+  box-sizing: border-box;
+  /* The colour and the weave's scale are variables so a card-back choice
+   * repaints every back at once; the two gradients keep the cloth's weave. */
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / var(--sp-back-scale, 7px) var(--sp-back-scale, 7px),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / var(--sp-back-scale, 7px) var(--sp-back-scale, 7px),
+    var(--sp-back-ink, #2f68b0);
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  border-radius: var(--sp-radius);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.16);
+}
+
+/* The hairline inset every back carries, drawn with a pseudo-element so a stock
+ * card and a tableau card cannot drift apart: all get the same ring at the same
+ * inset. */
+.sp-back::before,
+.sp-stock-back::before,
+.sp-fly::before,
+.sp-run-done::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: calc(var(--sp-radius) - 2px);
+  pointer-events: none;
+}
+
+/* A narrow docked pane leaves a 24px card, so the strip a covered card shows is
+ * the card's own top edge: a soft shadow above each face-up card separates the
+ * piles and marks where one card ends and the next begins. */
+.sp-card[data-rank] {
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.16);
+}
+
+/* ---- cleared runs and the stock -------------------------------------- */
+
+/* The foot is one row: the eight cleared-run slots at the left, the stock a
+ * short step in from the right edge, so the row reads as one table rather than
+ * a pile stranded in the corner. Both piles draw at the tableau's card size;
+ * on a pane too narrow to fit eight cards plus the stock, the slots give way
+ * first so the stock keeps its full card width. */
+.sp-foot {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: space-between;
+  min-width: 0;
+  padding-top: 8px;
+  padding-right: 4px;
+}
+
+/* The cleared runs stack their progress label under the eight slots, so the
+ * slots use the row's full width and all eight sit at card width. */
+.sp-run-area {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.sp-run-label {
+  flex: none;
+  color: var(--sp-felt-ink-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Eight slots at one card's width each, so a cleared run draws as the card it
+ * cleared. Each column takes an equal share of the row, capped at a card's
+ * width: the slots sit at card size whenever the pane holds them, and shrink
+ * together — never into the stock — when it does not. The cap subtracts the
+ * row's own gaps, so all eight land on card width at once. */
+.sp-foundation {
+  display: grid;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 0;
+  max-width: calc(8 * var(--sp-run-w) + 7 * 4px);
+}
+
+/* An untouched slot is printed on the cloth, like an empty column. */
+.sp-run {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--sp-run-h);
+  align-items: center;
+  justify-content: center;
+  color: var(--sp-felt-ink-dim);
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--sp-radius);
+}
+
+/* A cleared run's slot holds one cleared card, so it wears the same back as the
+ * rest of the deck. `.sp-run` paints the empty-slot well at the same
+ * specificity and comes later in the sheet, so the pile restates the back here;
+ * the two must stay in step, and that is the reason this one selector repeats
+ * the recipe rather than joining the shared list above. */
+.sp-run.sp-run-done {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / var(--sp-back-scale, 7px) var(--sp-back-scale, 7px),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%) 0 0 / var(--sp-back-scale, 7px) var(--sp-back-scale, 7px),
+    var(--sp-back-ink, #2f68b0);
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.16);
+  color: #fdfdfb;
+  font-size: clamp(12px, 46cqw, 22px);
+}
+
+/* Hearts and diamonds keep their red on the back, as a cleared run of that suit
+ * would on a real table. The tone is the card face's red, lightened enough to
+ * read against the blue back. */
+.sp-run.sp-run-done.sp-red-run {
+  color: #ff8a8a;
+}
+
+/* The completed-run glyph is a share of its own card, so it stays centred and
+ * proportional at every pane width. */
+.sp-run {
+  container-type: inline-size;
+}
+
+/* The stock: a real card's footprint at the board's right edge. Rounds stack
+ * with a small offset, so the remaining deals read as a pile's depth. */
+.sp-stock {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: calc(var(--sp-stock-w) + 4 * max(3px, calc(var(--sp-stock-w) * 0.08)));
+  height: calc(var(--sp-stock-h) + 4 * max(1px, calc(var(--sp-stock-h) * 0.02)));
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--sp-radius);
+  cursor: pointer;
+}
+
+.sp-stock:disabled {
+  cursor: default;
+}
+
+.sp-stock-back {
+  position: absolute;
+  width: var(--sp-stock-w);
+  height: var(--sp-stock-h);
+}
+
+@media (hover: hover) {
+  .sp-stock:not(:disabled):hover .sp-stock-back:last-of-type {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.sp-stock-empty {
+  width: var(--sp-stock-w);
+  height: var(--sp-stock-h);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* The hint points at the stock when no card can move: the pile lifts off the
+ * cloth with a gold ring, the same ink the hint uses on a column. */
+.sp-stock-hint .sp-stock-back:last-of-type,
+.sp-stock-hint .sp-stock-recycle {
+  box-shadow: 0 0 0 2px #ffd75e, 0 0 14px rgba(255, 215, 94, 0.55);
+}
+
+.sp-stock-hint {
+  animation: sp-pulse 1s ease-in-out infinite;
+}
+
+.sp-stock-recycle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 18px;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  border-radius: var(--sp-radius);
+}
+
+/* ---- statistics dialog ------------------------------------------------ */
+
+.sp-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--dsw-alias-bg-mask-1);
+}
+
+.sp-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  width: min(280px, 100%);
+  padding: 14px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-md);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-2);
+}
+
+.sp-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sp-dialog-close {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: var(--dsw-radius-xs);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .sp-dialog-close:hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.sp-dialog-sub {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.sp-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sp-stats-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+}
+
+.sp-stats-name {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.sp-stats-value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.sp-dialog-note {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ---- settings --------------------------------------------------------- */
+
+.sp-set-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sp-set-title {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* A row of swatches, each a small sample of what it selects: the felt swatches
+ * paint the table's own gradient, the back swatches the card-back recipe, so a
+ * choice is made by eye rather than by name. */
+.sp-set-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.sp-swatch {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-sizing: border-box;
+  aspect-ratio: 3 / 4;
+  padding: 3px;
+  overflow: hidden;
+  font: inherit;
+  border: 1.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-xs);
+  cursor: pointer;
+}
+
+.sp-swatch:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  outline-offset: 1px;
+}
+
+/* The pick carries a ring and lifts a step, so the current choice is unmistakable
+ * against three unselected neighbours. */
+.sp-swatch-on {
+  border-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+}
+
+.sp-swatch-label {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 0 2px;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1.3;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Felt samples: the same four colour pairs the table defines. */
+.sp-table-swatch-green { background: linear-gradient(160deg, #2e8b63, #237552); }
+.sp-table-swatch-blue { background: linear-gradient(160deg, #2f6fa8, #245a8a); }
+.sp-table-swatch-red { background: linear-gradient(160deg, #a63a50, #8a2c3f); }
+.sp-table-swatch-charcoal { background: linear-gradient(160deg, #5a5d63, #474a50); }
+
+/* Back samples: the shared card-back recipe in each colour. */
+.sp-back-swatch-classic,
+.sp-back-swatch-ruby,
+.sp-back-swatch-violet,
+.sp-back-swatch-midnight {
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%);
+  background-size: 7px 7px, 7px 7px;
+}
+
+.sp-back-swatch-classic { background-color: #2f68b0; }
+.sp-back-swatch-ruby { background-color: #b03050; }
+.sp-back-swatch-violet { background-color: #6444a0; }
+.sp-back-swatch-midnight { background-color: #33415c; }
+
+/* ---- result overlay --------------------------------------------------- */
+
+/* One card stands over the board at either end of a game: the win's spade on
+ * accent ink, or the dead end's cross on the warning ink. */
+.sp-win {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--dsw-alias-bg-mask-1);
+}
+
+/* The fireworks canvas fills the overlay under the result card: the display
+ * plays behind the card rather than over it, so scores stay readable. */
+.sp-fireworks {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sp-result-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  box-sizing: border-box;
+  width: min(260px, 100%);
+  padding: 20px 16px;
+  text-align: center;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-lg);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-2);
+}
+
+.sp-result-mark {
+  color: var(--dsw-alias-state-success-primary);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.sp-result-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sp-result-note {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sp-result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-result-btn {
+  margin-top: 4px;
+  padding: 6px 16px;
+  color: var(--dsw-alias-label-primary-foreground);
+  font: inherit;
+  font-size: 12px;
+  background: var(--dsw-alias-button-primary-fill);
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+}
+
+/* A dead end reads in the warning ink, so it never looks like a win. */
+.sp-win-lost .sp-result-mark {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+/* ---- sidebar foot ----------------------------------------------------- */
+
+.sp-foot-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .sp-foot-action:hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.sp-foot-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,12 @@
+# Normalise line endings in the repository, whatever the checkout platform.
+* text=auto eol=lf
+
+# Generated assets keep their bytes exactly as built.
+*.svg text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Binary-looking files, should any be added.
+*.png binary
+*.jpg binary
+*.webp binary

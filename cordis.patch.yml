@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-spider-solitaire
+      name: '@local/dsh-spider-solitaire'

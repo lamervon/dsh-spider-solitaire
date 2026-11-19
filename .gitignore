@@ -1,0 +1,14 @@
+# Scratch space for the build's measurements, never part of the package.
+.refs/
+
+# Only the harness's own sources ship: the vendored React copies are fetched
+# locally for the harness page and need no tracking.
+.harness/vendor/
+.harness/shots/
+
+# Editor and OS noise.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

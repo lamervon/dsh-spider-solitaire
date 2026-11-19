@@ -1,0 +1,31 @@
+{
+  "name": "@local/dsh-spider-solitaire",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "蜘蛛纸牌：在右侧边栏里玩一局经典蜘蛛接龙，成绩保存在本机",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "README.md",
+    "icon.svg",
+    "src"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-sidebar-right"]
+    }
+  }
+}

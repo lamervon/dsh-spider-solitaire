@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Spider Solitaire board harness</title>
+<style>
+  /* Only the host tokens and a pane-sized frame; the board's own stylesheet
+     arrives through the plugin's style element, exactly as in the app. */
+  :root { --dsw-font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+  body.light {
+    --dsw-alias-bg-base: #ffffff;
+    --dsw-alias-bg-layer-1: #ffffff;
+    --dsw-alias-bg-layer-2: #ffffff;
+    --dsw-alias-bg-overlay: #f5f7fa;
+    --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.24);
+    --dsw-alias-bg-mask-2: rgba(0, 0, 0, 0.12);
+    --dsw-alias-border-l1: rgba(0, 0, 0, 0.06);
+    --dsw-alias-border-l2: rgba(0, 0, 0, 0.10);
+    --dsw-alias-border-l3: rgba(0, 0, 0, 0.12);
+    --dsw-alias-border-selected: rgb(173, 178, 184);
+    --dsw-alias-label-primary: #0f1115;
+    --dsw-alias-label-secondary: #61666b;
+    --dsw-alias-label-tertiary: #81858c;
+    --dsw-alias-label-dimmed: #e1e5ee;
+    --dsw-alias-label-primary-foreground: #ffffff;
+    --dsw-alias-brand-primary-new-colorprimary-new-color: rgb(65, 118, 230);
+    --dsw-alias-interactive-bg-hover: rgba(38, 49, 72, 0.06);
+    --dsw-alias-interactive-bg-active: rgba(38, 49, 72, 0.10);
+    --dsw-alias-interactive-bg-hover-accent: rgba(38, 49, 72, 0.14);
+    --dsw-alias-state-success-primary: rgb(34, 197, 94);
+    --dsw-alias-state-warn-label: rgb(221, 134, 41);
+    --dsw-alias-button-primary-fill: #0f1115;
+    --dsw-radius-xs: 4px;
+    --dsw-radius-sm: 8px;
+    --dsw-radius-md: 12px;
+    --dsw-radius-lg: 16px;
+  }
+  body.dark {
+    --dsw-alias-bg-base: #151517;
+    --dsw-alias-bg-layer-1: #232324;
+    --dsw-alias-bg-layer-2: #2c2c2e;
+    --dsw-alias-bg-overlay: #434346;
+    --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.5);
+    --dsw-alias-bg-mask-2: rgba(0, 0, 0, 0.2);
+    --dsw-alias-border-l1: rgba(255, 255, 255, 0.06);
+    --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+    --dsw-alias-border-l3: rgba(255, 255, 255, 0.16);
+    --dsw-alias-border-selected: #adb2b8;
+    --dsw-alias-label-primary: #f9fafb;
+    --dsw-alias-label-secondary: #cfd3d6;
+    --dsw-alias-label-tertiary: #adb2b8;
+    --dsw-alias-label-dimmed: #434346;
+    --dsw-alias-label-primary-foreground: #151517;
+    --dsw-alias-brand-primary-new-colorprimary-new-color: rgb(86, 134, 254);
+    --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.08);
+    --dsw-alias-interactive-bg-active: rgba(255, 255, 255, 0.14);
+    --dsw-alias-interactive-bg-hover-accent: rgba(255, 255, 255, 0.24);
+    --dsw-alias-state-success-primary: rgb(34, 197, 94);
+    --dsw-alias-state-warn-label: rgb(221, 134, 41);
+    --dsw-alias-button-primary-fill: #f9fafb;
+    --dsw-radius-xs: 4px;
+    --dsw-radius-sm: 8px;
+    --dsw-radius-md: 12px;
+    --dsw-radius-lg: 16px;
+  }
+  html, body { margin: 0; height: 100%; }
+  body { background: #eceff3; font-family: var(--dsw-font-family); }
+  #frame {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 420px;
+    height: 700px;
+    margin: 16px;
+    overflow: hidden;
+    border: 1px solid #d0d4da;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  #root { display: flex; flex: 1 1 auto; min-height: 0; }
+</style>
+</head>
+<body class="light">
+<div id="frame"><div id="root"></div></div>
+<script src="vendor/react.js"></script>
+<script src="vendor/react-dom.js"></script>
+<script>
+  // The profile's module table, reduced to React: the bundle asks for React
+  // through it exactly as it does in the app.
+  const modules = { react: window.React }
+  let captured = null
+  window.__ModuleLoader__ = {
+    load({ factory }) {
+      captured = factory((name) => {
+        if (!(name in modules)) throw new Error('unknown module ' + name)
+        return modules[name]
+      })
+    },
+  }
+</script>
+<!-- The real bundle: it registers its style and its tab body, and the harness
+     then asks it for the body component through the slot registry below. -->
+<script src="dicts.js"></script>
+<script src="../client.js"></script>
+<script>
+  const params = new URLSearchParams(location.search)
+  if (params.get('theme') === 'dark') document.body.className = 'dark'
+  const width = Number(params.get('width')); if (width > 0) { document.getElementById('frame').style.width = width + 'px' }
+  const lang = params.get('lang') ?? 'zh'
+
+  // The build script writes the bundle's own dictionaries beside this page.
+  const DICTS = window.__SPIDER_DICTS__
+  const t = (key, values) => {
+    const template = (DICTS[lang] ?? DICTS.en)[key] ?? key
+    if (values === undefined) return template
+    return template.replace(/\{(\w+)\}/g, (whole, name) => (name in values ? String(values[name]) : whole))
+  }
+
+  // One slot registration is all the harness needs: the tab body component.
+  const capturedSlot = { component: null }
+  const ctx = {
+    get(name) {
+      if (name === 'locale') {
+        return {
+          register: () => () => {},
+          bind: () => t,
+        }
+      }
+      if (name === 'sidebarRightTabs') return { register: () => () => {} }
+      if (name === 'sidebarRight') return { openTab: () => {} }
+      return undefined
+    },
+    effect: (fn) => { const dispose = fn(); return () => { if (typeof dispose === 'function') dispose() } },
+    slots: {
+      inject: (_key, fn) => {
+        const dispose = fn()
+        return () => { if (typeof dispose === 'function') dispose() }
+      },
+      register: (options, component) => {
+        if (options.name === 'sidebar.right.pane.tab') capturedSlot.component = component
+        return () => {}
+      },
+    },
+  }
+  captured.apply(ctx)
+  const Board = capturedSlot.component
+  if (Board === null) throw new Error('the bundle registered no tab body')
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Board, { t }))
+</script>
+</body>
+</html>
