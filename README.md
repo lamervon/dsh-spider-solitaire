@@ -5,6 +5,8 @@
 
 Play classic Spider Solitaire inside the right Sidebar of DeepSeek Harness: deep-finish the board while an agent works, and come back to the game after a reload because the board and your statistics stay on this device.
 
+![display](display.png)
+
 ## Install
 
 This is a DeepSeek Harness plugin bundle. Install it from GitHub in **Plugins** → **Add plugin** by entering either spec:
