@@ -17,6 +17,8 @@ github:lamervon/dsh-spider-solitaire
 git@github.com:lamervon/dsh-spider-solitaire.git
 ```
 
+It requires DeepSeek Harness 0.2.x (`>=0.2.0-rc.1 <0.3.0`); the Plugin Manager refuses the install on a host outside that range.
+
 To track a moving branch rather than the default, pin it: `github:lamervon/dsh-spider-solitaire#main`.
 
 To install from a checkout instead, pick the folder with **Add plugin** → local directory.
